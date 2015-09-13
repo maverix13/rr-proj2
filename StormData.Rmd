@@ -1,0 +1,22 @@
+---
+title: "Analysis of severe weather events on public health and economic consequences"
+author: "Maverix13"
+date: "September 5, 2015"
+output: html_document
+---
+
+## Synopsis
+Synopsis will come here
+
+
+## Data Processing
+```{r}
+if(!file.exists("data")){
+    dir.create("data")
+}
+if(!file.exists("data/stormData.csv")) {
+    download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "stormData.csv.bz2")
+    bunzip2("data/stormData.csv.bz2")
+}
+```
+
