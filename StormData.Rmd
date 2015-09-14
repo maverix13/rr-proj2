@@ -1,22 +1,74 @@
 ---
-title: "Analysis of severe weather events on public health and economic consequences"
+title: "Analysis of severe weather events on public health and economic consequences across United States"
 author: "Maverix13"
-date: "September 5, 2015"
-output: html_document
+date: "September 13, 2015"
+output: 
+  html_document: 
+    keep_md: yes
 ---
 
 ## Synopsis
-Synopsis will come here
+This report explores  the NOAA Storm Database and answer some basic questions about severe weather events. 
+The analysis covers:
 
+* Across United States, events that are most harmful to public health.
+* Across United States, events that have greatest economic consequences.
+
+Results <% plug here%>
 
 ## Data Processing
-```{r}
+
+Data is downloaded, if required. Code checks if data already exists. Data is then loaded into R. 
+Note that a zip file is directly read using read.csv. There is no need to unzip it.
+```{r message=FALSE}
+library(dplyr)
+library(ggplot2)
+```
+```{r cache=TRUE}
 if(!file.exists("data")){
     dir.create("data")
 }
-if(!file.exists("data/stormData.csv")) {
-    download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "stormData.csv.bz2")
-    bunzip2("data/stormData.csv.bz2")
+if(!file.exists("data/stormData.csv.bz2")) {
+    download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "data/stormData.csv.bz2", method = "curl")
+    
 }
+
+stormData <- read.csv("data/stormData.csv.bz2")
+dim(stormData)
+```
+```{r}
+head(stormData[,2:28])
 ```
 
+### Preprocessing Data
+As the histogram below shows, in the earlier years of the database there are generally fewer events recorded, most likely due to a lack of good records. 
+```{r cache=TRUE}
+stormData <- mutate(stormData, YEAR = as.numeric(format(as.Date(BGN_DATE, format = "%m/%d/%Y %H:%M:%S"), "%Y")))
+g <- ggplot(stormData, aes(YEAR, fill = ..count.., removePanelGrid=TRUE,removePanelBorder=TRUE,)) +
+  geom_histogram(binwidth=5) + 
+  ylab("Number of Events") +
+  scale_fill_gradient("# Events", low = "black", high = "gray") +
+  ggtitle("Histogram: Events By Year")
+print(g)
+```
+
+Hence for this report, data after 1990 is considered for analysis.
+
+```{r}
+stormData <- stormData[stormData$YEAR >= 1990,]
+dim(stormData)
+```
+
+Following columns are of relevance for the current analysis
+
+Column Name | Description
+------------|------------
+EVTYPE      | Type of storm event. Take note that similar storm events can be listed using different wording e.g. “coastal flood” and “coastal flooding.” Take note of this if you want to run a query grouping by event type. 
+FATALITIES  | Number directly killed
+INJURIES    | Number directly injured
+PROPDMG		  |	Property damage in whole numbers and hundredths
+PROPDMGEXP	|	A multiplier where Hundred (H), Thousand (K), Million (M), Billion (B)
+CROPDMG		  |	Crop damage in whole numbers and hundredths
+CROPDMGEXP	|	A multiplier where Hundred (H), Thousand (K), Million (M), Billion (B)
+
+This above table is constructed based on information from http://ire.org/nicar/database-library/databases/storm-events/
