@@ -113,3 +113,14 @@ CROPDMG		  |	Crop damage in whole numbers and hundredths
 CROPDMGEXP	|	A multiplier where Hundred (H), Thousand (K), Million (M), Billion (B)
 
 This above table is constructed based on information from http://ire.org/nicar/database-library/databases/storm-events/
+
+Further reduction of stormData based on columns and row values
+
+```r
+## Just keeping relevant columns
+relevantColumns <- c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")
+stormData <- stormData[,relevantColumns]
+## Keep rows having any data
+stormData <- subset(stormData, FATALITIES > 0 | INJURIES > 0 | PROPDMG > 0 | CROPDMG > 0)
+```
+

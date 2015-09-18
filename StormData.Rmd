@@ -54,7 +54,7 @@ print(g)
 
 Hence for this report, data after 1990 is considered for analysis.
 
-```{r}
+```{r cache=TRUE}
 stormData <- stormData[stormData$YEAR >= 1990,]
 dim(stormData)
 ```
@@ -72,3 +72,13 @@ CROPDMG		  |	Crop damage in whole numbers and hundredths
 CROPDMGEXP	|	A multiplier where Hundred (H), Thousand (K), Million (M), Billion (B)
 
 This above table is constructed based on information from http://ire.org/nicar/database-library/databases/storm-events/
+
+Further reduction of stormData based on columns and row values
+```{r cache=TRUE}
+## Just keeping relevant columns
+relevantColumns <- c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")
+stormData <- stormData[,relevantColumns]
+## Keep rows having any data
+stormData <- subset(stormData, FATALITIES > 0 | INJURIES > 0 | PROPDMG > 0 | CROPDMG > 0)
+```
+
