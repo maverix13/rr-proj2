@@ -82,3 +82,17 @@ stormData <- stormData[,relevantColumns]
 stormData <- subset(stormData, FATALITIES > 0 | INJURIES > 0 | PROPDMG > 0 | CROPDMG > 0)
 ```
 
+### Analysis on public health
+This section covers the analysis of fatalities and injuries caused by a given storm event. 
+
+```{r cache=TRUE}
+pubHealthData <- stormData %>% group_by(EVTYPE) %>% summarize(eventCount = n(), fatalities = sum(FATALITIES), injuries = sum(INJURIES))
+summary(pubHealthData)
+```
+```{r}
+thirdQuantilePubHealth <- subset(pubHealthData, fatalities >=1  | injuries >= 2)
+percentFatalities <- sum(thirdQuantilePubHealth$fatalities) * 100 / sum(pubHealthData$fatalities)
+percentInjuries <- sum(thirdQuantilePubHealth$injuries) * 100 / sum(pubHealthData$injuries)
+```
+
+Third Quantile covers most of the data. Percent coverage for fatalities is `r percentFatalities` % and for injuries is `r percentInjuries` %. Further analysis is done on this data.
