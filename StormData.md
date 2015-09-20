@@ -236,31 +236,34 @@ formattable(economicData, list(
 ## Results
 
 ```r
-tempData <- arrange(pubHealthData, desc(fatalities))
-tempData <- tempData %>%
+fData <- pubHealthData %>%
+    select(EVGROUP, fatalities) %>%
     mutate(
         cumFatal = cumsum(fatalities),
         cumPerc = cumFatal/sum(fatalities)
     )
-kable(tempData)
+#mtcars3$car <-factor(mtcars2$car, levels=mtcars2[order(mtcars$mpg), "car"])
+fData$EVGROUP <- factor(pubHealthData$EVGROUP, levels=pubHealthData[order(desc(pubHealthData$fatalities)), "EVGROUP"])
+kable(fData)
 ```
 
 
 
-EVGROUP                fatalities   injuries   cumFatal     cumPerc
---------------------  -----------  ---------  ---------  ----------
-Extreme Temperature          2267       9202       2267   0.2596198
-Convection                   2170      25533       4437   0.5081310
-Flood                        1404       8670       5841   0.6689189
-Wind                         1034       7127       6875   0.7873339
-Winter                        764       3491       7639   0.8748282
-Marine                        751        989       8390   0.9608337
-Cyclone                       182       1661       8572   0.9816766
-Others                        160       1302       8732   1.0000000
+EVGROUP    fatalities   cumFatal     cumPerc
+--------  -----------  ---------  ----------
+NA               2170       2170   0.2485112
+NA                182       2352   0.2693541
+NA               2267       4619   0.5289739
+NA               1404       6023   0.6897618
+NA                751       6774   0.7757673
+NA                160       6934   0.7940907
+NA               1034       7968   0.9125057
+NA                764       8732   1.0000000
 
 ```r
-fatalitiesPlot <- ggplot(tempData, aes(x=EVGROUP)) +
-    geom_bar(aes(y=fatalities), stat = "identity")
+fatalitiesPlot <- ggplot(fData, aes(y=fatalities, x=EVGROUP)) +
+    geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 print(fatalitiesPlot)
 ```
 

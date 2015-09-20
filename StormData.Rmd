@@ -3,8 +3,8 @@ title: "Analysis of severe weather events on public health and economic conseque
 author: "Maverix13"
 date: "September 13, 2015"
 output: 
-  html_document: 
-    keep_md: yes
+html_document: 
+keep_md: yes
 ---
 
 ## Synopsis
@@ -27,14 +27,15 @@ library(knitr)
 library(dplyr)
 library(ggplot2)
 library(formattable)
+require(gridExtra)
 ```
 ```{r cache=TRUE}
 if(!file.exists("data")){
-    dir.create("data")
+  dir.create("data")
 }
 if(!file.exists("data/stormData.csv.bz2")) {
-    download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "data/stormData.csv.bz2", method = "curl")
-    
+  download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", "data/stormData.csv.bz2", method = "curl")
+  
 }
 
 stormData <- read.csv("data/stormData.csv.bz2")
@@ -95,19 +96,19 @@ Many events can be grouped together based on similarity. The categorization for 
 ```{r}
 stormData$EVGROUP <- "Others"
 stormData[grepl("tornado|thunderstorm|hail|funnel|tstm|lig(.*?)ing", 
-                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Convection"
+                stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Convection"
 stormData[grepl("temperature|cold|cool|heat|hot|fire|dry|warm|wet|freez", 
-                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Extreme Temperature"
+                stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Extreme Temperature"
 stormData[grepl("flood|rain|mud(.*?)slid", 
-                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Flood"
+                stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Flood"
 stormData[grepl("marine|sea|tide|coast|tsunami|current|surf|wave", 
-                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Marine"
+                stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Marine"
 stormData[grepl("tropic|cyclone|hurricane", 
-                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Cyclone"
+                stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Cyclone"
 stormData[grepl("avalanche|snow|blizzard|winter|wintry|ice", 
-                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Winter"
+                stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Winter"
 stormData[grepl("wind|dust", 
-                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Wind"
+                stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Wind"
 
 stormData$EVGROUP <- as.factor(stormData$EVGROUP)
 ```
@@ -117,8 +118,8 @@ Analysis of fatalities and injuries caused by a given storm event group.
 
 ```{r cache=TRUE}
 pubHealthData <- stormData %>% 
-    group_by(EVGROUP) %>% 
-    summarize(fatalities = sum(FATALITIES), injuries = sum(INJURIES))
+  group_by(EVGROUP) %>% 
+  summarize(fatalities = sum(FATALITIES), injuries = sum(INJURIES))
 kable(pubHealthData)
 ```
 
@@ -132,36 +133,59 @@ Unique values for both property and crop damage exponents is ['K', 'M', 'B']. Th
 
 ```{r cache=TRUE}
 economicData <- stormData %>% 
-    mutate(PROPDMGVAL = PROPDMG * (
+  mutate(PROPDMGVAL = PROPDMG * (
     ifelse(PROPDMGEXP == "K", 1000,
-    ifelse(PROPDMGEXP == "M", 1000000,
-    ifelse(PROPDMGEXP == "B", 1000000000,
-                              1  )))))  %>% 
-    mutate(CROPDMGVAL = CROPDMG * (
+           ifelse(PROPDMGEXP == "M", 1000000,
+                  ifelse(PROPDMGEXP == "B", 1000000000,
+                         1  )))))  %>% 
+  mutate(CROPDMGVAL = CROPDMG * (
     ifelse(CROPDMGEXP == "K", 1000,
-    ifelse(CROPDMGEXP == "M", 1000000,
-    ifelse(CROPDMGEXP == "B", 1000000000,
-                              1  ))))) %>%
-    group_by(EVGROUP) %>%
-    summarize(propertyDamage = sum(PROPDMGVAL), cropDamage = sum(CROPDMGVAL))
+           ifelse(CROPDMGEXP == "M", 1000000,
+                  ifelse(CROPDMGEXP == "B", 1000000000,
+                         1  ))))) %>%
+  group_by(EVGROUP) %>%
+  summarize(propertyDamage = sum(PROPDMGVAL), cropDamage = sum(CROPDMGVAL))
 
 formattable(economicData, list(
-    propertyDamage=currency,
-    cropDamage=currency 
+  propertyDamage=currency,
+  cropDamage=currency 
 ))
 ```
 
 ## Results
-```{r cache=TRUE}
-tempData <- arrange(pubHealthData, desc(fatalities))
-tempData <- tempData %>%
-    mutate(
-        cumFatal = cumsum(fatalities),
-        cumPerc = cumFatal/sum(fatalities)
-    )
-kable(tempData)
-fatalitiesPlot <- ggplot(tempData, aes(x=EVGROUP)) +
-    geom_bar(aes(y=fatalities), stat = "identity")
-print(fatalitiesPlot)
+```{r}
+fData <- pubHealthData %>%
+  arrange(desc(fatalities)) %>%
+  select(EVGROUP, fatalities) %>%
+  mutate(
+    cumulativeSum = cumsum(fatalities),
+    cumPercent = cumulativeSum/sum(fatalities)
+  )
+formattable(fData, list(
+  cumPercent = percent
+))
+iData <- pubHealthData %>%
+  arrange(desc(injuries)) %>%
+  select(EVGROUP, injuries) %>%
+  mutate(
+    cumulativeSum = cumsum(injuries),
+    cumPercent = cumulativeSum/sum(injuries)
+  )
+formattable(iData, list(
+  cumPercent = percent
+))
+fPlot <- ggplot(fData, aes(x=reorder(EVGROUP, desc(fatalities)))) +
+  geom_bar(aes(y=fatalities), stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab("Severe Weather Category") +
+  scale_y_continuous("Number of Fatalities") +
+  ggtitle("Number of Fatalities\n by Weather Category\n from 1996 - 2011")
+iPlot <- ggplot(iData, aes(x=reorder(EVGROUP, desc(injuries)))) +
+  geom_bar(aes(y=injuries), stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  xlab("Severe Weather Category") +
+  scale_y_continuous("Number of Injuries") +
+  ggtitle("Number of Injuries\n by Weather Category\n from 1996 - 2011")
+grid.arrange(fPlot, iPlot, ncol = 2)
 ```
 
