@@ -21,9 +21,12 @@ Results <% plug here%>
 Data is downloaded, if required. Code checks if data already exists. Data is then loaded into R. 
 Note that a zip file is directly read using read.csv. There is no need to unzip it.
 ```{r message=FALSE}
+#install.packages("devtools")
+#devtools::install_github("renkun-ken/formattable")
 library(knitr)
 library(dplyr)
 library(ggplot2)
+library(formattable)
 ```
 ```{r cache=TRUE}
 if(!file.exists("data")){
@@ -141,6 +144,24 @@ economicData <- stormData %>%
                               1  ))))) %>%
     group_by(EVGROUP) %>%
     summarize(propertyDamage = sum(PROPDMGVAL), cropDamage = sum(CROPDMGVAL))
-kable(economicData)
+
+formattable(economicData, list(
+    propertyDamage=currency,
+    cropDamage=currency 
+))
+```
+
+## Results
+```{r cache=TRUE}
+tempData <- arrange(pubHealthData, desc(fatalities))
+tempData <- tempData %>%
+    mutate(
+        cumFatal = cumsum(fatalities),
+        cumPerc = cumFatal/sum(fatalities)
+    )
+kable(tempData)
+fatalitiesPlot <- ggplot(tempData, aes(x=EVGROUP)) +
+    geom_bar(aes(y=fatalities), stat = "identity")
+print(fatalitiesPlot)
 ```
 

@@ -17,8 +17,12 @@ Data is downloaded, if required. Code checks if data already exists. Data is the
 Note that a zip file is directly read using read.csv. There is no need to unzip it.
 
 ```r
+#install.packages("devtools")
+#devtools::install_github("renkun-ken/formattable")
+library(knitr)
 library(dplyr)
 library(ggplot2)
+library(formattable)
 ```
 
 ```r
@@ -78,7 +82,7 @@ As the histogram below shows, in the earlier years of the database there are gen
 
 ```r
 stormData <- mutate(stormData, YEAR = as.numeric(format(as.Date(BGN_DATE, format = "%m/%d/%Y %H:%M:%S"), "%Y")))
-g <- ggplot(stormData, aes(YEAR, fill = ..count.., removePanelGrid=TRUE,removePanelBorder=TRUE,)) +
+g <- ggplot(stormData, aes(YEAR, fill = ..count.., removePanelGrid=TRUE,removePanelBorder=TRUE)) +
   geom_histogram(binwidth=5) + 
   ylab("Number of Events") +
   scale_fill_gradient("# Events", low = "black", high = "gray") +
@@ -88,16 +92,16 @@ print(g)
 
 ![](StormData_files/figure-html/unnamed-chunk-4-1.png) 
 
-Hence for this report, data after 1990 is considered for analysis.
+Hence for this report, data after 1996 is considered for analysis.
 
 
 ```r
-stormData <- stormData[stormData$YEAR >= 1990,]
+stormData <- stormData[stormData$YEAR >= 1996,]
 dim(stormData)
 ```
 
 ```
-## [1] 751740     38
+## [1] 653530     38
 ```
 
 Following columns are of relevance for the current analysis
@@ -116,6 +120,7 @@ This above table is constructed based on information from http://ire.org/nicar/d
 
 Further reduction of stormData based on columns and row values
 
+
 ```r
 ## Just keeping relevant columns
 relevantColumns <- c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")
@@ -124,38 +129,140 @@ stormData <- stormData[,relevantColumns]
 stormData <- subset(stormData, FATALITIES > 0 | INJURIES > 0 | PROPDMG > 0 | CROPDMG > 0)
 ```
 
+#### Mapping of Events to Group
+Many events can be grouped together based on similarity. The categorization for this report is based on NOAA 2009 Annual Summaries (http://www.ncdc.noaa.gov/oa/climate/sd/annsum2009.pdf).
+
+
+```r
+stormData$EVGROUP <- "Others"
+stormData[grepl("tornado|thunderstorm|hail|funnel|tstm|lig(.*?)ing", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Convection"
+stormData[grepl("temperature|cold|cool|heat|hot|fire|dry|warm|wet|freez", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Extreme Temperature"
+stormData[grepl("flood|rain|mud(.*?)slid", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Flood"
+stormData[grepl("marine|sea|tide|coast|tsunami|current|surf|wave", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Marine"
+stormData[grepl("tropic|cyclone|hurricane", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Cyclone"
+stormData[grepl("avalanche|snow|blizzard|winter|wintry|ice", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Winter"
+stormData[grepl("wind|dust", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Wind"
+
+stormData$EVGROUP <- as.factor(stormData$EVGROUP)
+```
+
 ### Analysis on public health
-This section covers the analysis of fatalities and injuries caused by a given storm event. 
+Analysis of fatalities and injuries caused by a given storm event group. 
 
 
 ```r
-pubHealthData <- stormData %>% group_by(EVTYPE) %>% summarize(eventCount = n(), fatalities = sum(FATALITIES), injuries = sum(INJURIES))
-summary(pubHealthData)
+pubHealthData <- stormData %>% 
+    group_by(EVGROUP) %>% 
+    summarize(fatalities = sum(FATALITIES), injuries = sum(INJURIES))
+kable(pubHealthData)
+```
+
+
+
+EVGROUP                fatalities   injuries
+--------------------  -----------  ---------
+Convection                   2170      25533
+Cyclone                       182       1661
+Extreme Temperature          2267       9202
+Flood                        1404       8670
+Marine                        751        989
+Others                        160       1302
+Wind                         1034       7127
+Winter                        764       3491
+
+### Analysis on Economic Impact
+Analysis of property and crop damage caused by a given event group. 
+
+```r
+unique(stormData$PROPDMGEXP)
 ```
 
 ```
-##                     EVTYPE      eventCount        fatalities     
-##  ?                     :  1   Min.   :    1.0   Min.   :   0.00  
-##  AGRICULTURAL FREEZE   :  1   1st Qu.:    1.0   1st Qu.:   0.00  
-##  APACHE COUNTY         :  1   Median :    1.0   Median :   0.00  
-##  ASTRONOMICAL HIGH TIDE:  1   Mean   :  471.5   Mean   :  22.72  
-##  ASTRONOMICAL LOW TIDE :  1   3rd Qu.:    6.0   3rd Qu.:   1.00  
-##  AVALANCE              :  1   Max.   :62417.0   Max.   :1903.00  
-##  (Other)               :482                                      
-##     injuries    
-##  Min.   :    0  
-##  1st Qu.:    0  
-##  Median :    0  
-##  Mean   :  151  
-##  3rd Qu.:    2  
-##  Max.   :26674  
-## 
+## [1] K   M B
+## Levels:  - ? + 0 1 2 3 4 5 6 7 8 B h H K m M
 ```
 
 ```r
-thirdQuantilePubHealth <- subset(pubHealthData, fatalities >=1  | injuries >= 2)
-percentFatalities <- sum(thirdQuantilePubHealth$fatalities) * 100 / sum(pubHealthData$fatalities)
-percentInjuries <- sum(thirdQuantilePubHealth$injuries) * 100 / sum(pubHealthData$injuries)
+unique(stormData$CROPDMGEXP)
 ```
 
-Third Quantile covers most of the data. Percent coverage for fatalities is 100 % and for injuries is 99.9715057 %.
+```
+## [1] K   M B
+## Levels:  ? 0 2 B k K m M
+```
+Unique values for both property and crop damage exponents is ['K', 'M', 'B']. These values are mulitpliers as mentioned above in column descriptions.
+
+
+```r
+economicData <- stormData %>% 
+    mutate(PROPDMGVAL = PROPDMG * (
+    ifelse(PROPDMGEXP == "K", 1000,
+    ifelse(PROPDMGEXP == "M", 1000000,
+    ifelse(PROPDMGEXP == "B", 1000000000,
+                              1  )))))  %>% 
+    mutate(CROPDMGVAL = CROPDMG * (
+    ifelse(CROPDMGEXP == "K", 1000,
+    ifelse(CROPDMGEXP == "M", 1000000,
+    ifelse(CROPDMGEXP == "B", 1000000000,
+                              1  ))))) %>%
+    group_by(EVGROUP) %>%
+    summarize(propertyDamage = sum(PROPDMGVAL), cropDamage = sum(CROPDMGVAL))
+
+formattable(economicData, list(
+    propertyDamage=currency,
+    cropDamage=currency 
+))
+```
+
+
+|             EVGROUP|      propertyDamage|         cropDamage|
+|-------------------:|-------------------:|------------------:|
+|          Convection|  $39,955,370,310.00|  $2,787,145,900.00|
+|             Cyclone|  $88,762,871,560.00|  $6,026,993,800.00|
+| Extreme Temperature|   $7,812,842,200.00|  $3,530,582,630.00|
+|               Flood| $159,904,859,000.00|  $7,067,994,900.00|
+|              Marine|   $5,295,157,060.00|     $42,522,500.00|
+|              Others|  $45,253,732,050.00| $13,439,935,500.00|
+|                Wind|  $13,369,105,350.00|  $1,736,767,400.00|
+|              Winter|   $6,413,677,850.00|    $120,786,100.00|
+
+## Results
+
+```r
+tempData <- arrange(pubHealthData, desc(fatalities))
+tempData <- tempData %>%
+    mutate(
+        cumFatal = cumsum(fatalities),
+        cumPerc = cumFatal/sum(fatalities)
+    )
+kable(tempData)
+```
+
+
+
+EVGROUP                fatalities   injuries   cumFatal     cumPerc
+--------------------  -----------  ---------  ---------  ----------
+Extreme Temperature          2267       9202       2267   0.2596198
+Convection                   2170      25533       4437   0.5081310
+Flood                        1404       8670       5841   0.6689189
+Wind                         1034       7127       6875   0.7873339
+Winter                        764       3491       7639   0.8748282
+Marine                        751        989       8390   0.9608337
+Cyclone                       182       1661       8572   0.9816766
+Others                        160       1302       8732   1.0000000
+
+```r
+fatalitiesPlot <- ggplot(tempData, aes(x=EVGROUP)) +
+    geom_bar(aes(y=fatalities), stat = "identity")
+print(fatalitiesPlot)
+```
+
+![](StormData_files/figure-html/unnamed-chunk-11-1.png) 
+
