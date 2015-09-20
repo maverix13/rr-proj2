@@ -21,6 +21,7 @@ Results <% plug here%>
 Data is downloaded, if required. Code checks if data already exists. Data is then loaded into R. 
 Note that a zip file is directly read using read.csv. There is no need to unzip it.
 ```{r message=FALSE}
+library(knitr)
 library(dplyr)
 library(ggplot2)
 ```
@@ -44,7 +45,7 @@ head(stormData[,2:28])
 As the histogram below shows, in the earlier years of the database there are generally fewer events recorded, most likely due to a lack of good records. 
 ```{r cache=TRUE}
 stormData <- mutate(stormData, YEAR = as.numeric(format(as.Date(BGN_DATE, format = "%m/%d/%Y %H:%M:%S"), "%Y")))
-g <- ggplot(stormData, aes(YEAR, fill = ..count.., removePanelGrid=TRUE,removePanelBorder=TRUE,)) +
+g <- ggplot(stormData, aes(YEAR, fill = ..count.., removePanelGrid=TRUE,removePanelBorder=TRUE)) +
   geom_histogram(binwidth=5) + 
   ylab("Number of Events") +
   scale_fill_gradient("# Events", low = "black", high = "gray") +
@@ -52,10 +53,10 @@ g <- ggplot(stormData, aes(YEAR, fill = ..count.., removePanelGrid=TRUE,removePa
 print(g)
 ```
 
-Hence for this report, data after 1990 is considered for analysis.
+Hence for this report, data after 1996 is considered for analysis.
 
 ```{r cache=TRUE}
-stormData <- stormData[stormData$YEAR >= 1990,]
+stormData <- stormData[stormData$YEAR >= 1996,]
 dim(stormData)
 ```
 
@@ -74,25 +75,72 @@ CROPDMGEXP	|	A multiplier where Hundred (H), Thousand (K), Million (M), Billion 
 This above table is constructed based on information from http://ire.org/nicar/database-library/databases/storm-events/
 
 Further reduction of stormData based on columns and row values
+
 ```{r cache=TRUE}
 ## Just keeping relevant columns
 relevantColumns <- c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")
 stormData <- stormData[,relevantColumns]
 ## Keep rows having any data
 stormData <- subset(stormData, FATALITIES > 0 | INJURIES > 0 | PROPDMG > 0 | CROPDMG > 0)
+
+
+```
+
+#### Mapping of Events to Group
+Many events can be grouped together based on similarity. The categorization for this report is based on NOAA 2009 Annual Summaries (http://www.ncdc.noaa.gov/oa/climate/sd/annsum2009.pdf).
+
+```{r}
+stormData$EVGROUP <- "Others"
+stormData[grepl("tornado|thunderstorm|hail|funnel|tstm|lig(.*?)ing", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Convection"
+stormData[grepl("temperature|cold|cool|heat|hot|fire|dry|warm|wet|freez", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Extreme Temperature"
+stormData[grepl("flood|rain|mud(.*?)slid", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Flood"
+stormData[grepl("marine|sea|tide|coast|tsunami|current|surf|wave", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Marine"
+stormData[grepl("tropic|cyclone|hurricane", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Cyclone"
+stormData[grepl("avalanche|snow|blizzard|winter|wintry|ice", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Winter"
+stormData[grepl("wind|dust", 
+                       stormData$EVTYPE, ignore.case = TRUE), "EVGROUP"] <- "Wind"
+
+stormData$EVGROUP <- as.factor(stormData$EVGROUP)
 ```
 
 ### Analysis on public health
-This section covers the analysis of fatalities and injuries caused by a given storm event. 
+Analysis of fatalities and injuries caused by a given storm event group. 
 
 ```{r cache=TRUE}
-pubHealthData <- stormData %>% group_by(EVTYPE) %>% summarize(eventCount = n(), fatalities = sum(FATALITIES), injuries = sum(INJURIES))
-summary(pubHealthData)
-```
-```{r}
-thirdQuantilePubHealth <- subset(pubHealthData, fatalities >=1  | injuries >= 2)
-percentFatalities <- sum(thirdQuantilePubHealth$fatalities) * 100 / sum(pubHealthData$fatalities)
-percentInjuries <- sum(thirdQuantilePubHealth$injuries) * 100 / sum(pubHealthData$injuries)
+pubHealthData <- stormData %>% 
+    group_by(EVGROUP) %>% 
+    summarize(fatalities = sum(FATALITIES), injuries = sum(INJURIES))
+kable(pubHealthData)
 ```
 
-Third Quantile covers most of the data. Percent coverage for fatalities is `r percentFatalities` % and for injuries is `r percentInjuries` %. Further analysis is done on this data.
+### Analysis on Economic Impact
+Analysis of property and crop damage caused by a given event group. 
+```{r}
+unique(stormData$PROPDMGEXP)
+unique(stormData$CROPDMGEXP)
+```
+Unique values for both property and crop damage exponents is ['K', 'M', 'B']. These values are mulitpliers as mentioned above in column descriptions.
+
+```{r cache=TRUE}
+economicData <- stormData %>% 
+    mutate(PROPDMGVAL = PROPDMG * (
+    ifelse(PROPDMGEXP == "K", 1000,
+    ifelse(PROPDMGEXP == "M", 1000000,
+    ifelse(PROPDMGEXP == "B", 1000000000,
+                              1  )))))  %>% 
+    mutate(CROPDMGVAL = CROPDMG * (
+    ifelse(CROPDMGEXP == "K", 1000,
+    ifelse(CROPDMGEXP == "M", 1000000,
+    ifelse(CROPDMGEXP == "B", 1000000000,
+                              1  ))))) %>%
+    group_by(EVGROUP) %>%
+    summarize(propertyDamage = sum(PROPDMGVAL), cropDamage = sum(CROPDMGVAL))
+kable(economicData)
+```
+
