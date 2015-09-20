@@ -27,6 +27,7 @@ library(knitr)
 library(dplyr)
 library(ggplot2)
 library(formattable)
+library(reshape2)
 require(gridExtra)
 ```
 ```{r cache=TRUE}
@@ -143,12 +144,15 @@ economicData <- stormData %>%
            ifelse(CROPDMGEXP == "M", 1000000,
                   ifelse(CROPDMGEXP == "B", 1000000000,
                          1  ))))) %>%
+  mutate(TOTALDMG = PROPDMGVAL + CROPDMGVAL) %>%
   group_by(EVGROUP) %>%
-  summarize(propertyDamage = sum(PROPDMGVAL), cropDamage = sum(CROPDMGVAL))
-
+  summarize(propertyDamage = sum(PROPDMGVAL), cropDamage = sum(CROPDMGVAL), totalDamage = sum(TOTALDMG)) %>%
+  arrange(desc(totalDamage))
+economicData$EVGROUP <- factor(economicData$EVGROUP, levels=economicData$EVGROUP)
 formattable(economicData, list(
   propertyDamage=currency,
-  cropDamage=currency 
+  cropDamage=currency,
+  totalDamage=currency
 ))
 ```
 
@@ -187,5 +191,36 @@ iPlot <- ggplot(iData, aes(x=reorder(EVGROUP, desc(injuries)))) +
   scale_y_continuous("Number of Injuries") +
   ggtitle("Number of Injuries\n by Weather Category\n from 1996 - 2011")
 grid.arrange(fPlot, iPlot, ncol = 2)
+
+pData <- economicData %>%
+  arrange(desc(propertyDamage)) %>%
+  select(EVGROUP, propertyDamage) %>%
+  mutate(
+    cumulativeSum = cumsum(propertyDamage),
+    cumPercent = cumulativeSum/sum(propertyDamage)
+  )
+formattable(pData, list(
+  propertyDamage=currency,
+  cumPercent = percent
+))
+cData <- economicData %>%
+  arrange(desc(cropDamage)) %>%
+  select(EVGROUP, cropDamage) %>%
+  mutate(
+    cumulativeSum = cumsum(cropDamage),
+    cumPercent = cumulativeSum/sum(cropDamage)
+  )
+formattable(cData, list(
+  cropDamage=currency,
+  cumPercent = percent
+))
+
+
+meltData <- melt(economicData[,c('EVGROUP','propertyDamage','cropDamage')], id.var="EVGROUP")
+ePlot <- ggplot(meltData, aes(x = EVGROUP, y = value/1000000, fill = variable)) + 
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+print(ePlot)
+
 ```
 
