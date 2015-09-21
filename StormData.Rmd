@@ -19,7 +19,7 @@ Results, covered later in the document, shows that 50% of the fatalities are cau
 ## Data Processing
 
 Data is downloaded, if required. Code checks if data already exists. Data is then loaded into R. 
-Note that a zip file is directly read using read.csv. There is no need to unzip it.
+Note that a zip file is directly read using read.csv. There is no need to unzip it as read.csv will handle it.
 ```{r message=FALSE}
 #install.packages("devtools")
 #devtools::install_github("renkun-ken/formattable")
@@ -130,7 +130,7 @@ Analysis of property and crop damage caused by a given event group.
 unique(stormData$PROPDMGEXP)
 unique(stormData$CROPDMGEXP)
 ```
-Unique values for both property and crop damage exponents is ['K', 'M', 'B']. These values are mulitpliers as mentioned above in column descriptions.
+Unique values for both property and crop damage exponents is ['K', 'M', 'B']. These values are mulitpliers as mentioned above in column descriptions. 
 
 ```{r cache=TRUE}
 economicData <- stormData %>% 
@@ -157,6 +157,8 @@ formattable(economicData, list(
 ```
 
 ## Results
+
+### Impact on public health
 ```{r}
 fData <- pubHealthData %>%
   arrange(desc(fatalities)) %>%
@@ -168,6 +170,9 @@ fData <- pubHealthData %>%
 formattable(fData, list(
   cumPercent = percent
 ))
+```
+Table above shows fatalities along with a cumulative percent. Extreme Temperature, Convection, Flood and Wind together cause over 7500 fatalities which is close to 80% of total fatalities. 
+```{r}
 iData <- pubHealthData %>%
   arrange(desc(injuries)) %>%
   select(EVGROUP, injuries) %>%
@@ -178,6 +183,9 @@ iData <- pubHealthData %>%
 formattable(iData, list(
   cumPercent = percent
 ))
+```
+As with fatalities, injuries are also mostly caused by Convection, Extreme Temperature, Flood and Wind resulting in over 50,000 injuries.
+```{r}
 fPlot <- ggplot(fData, aes(x=reorder(EVGROUP, desc(fatalities)))) +
   geom_bar(aes(y=fatalities), stat = "identity") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -191,7 +199,11 @@ iPlot <- ggplot(iData, aes(x=reorder(EVGROUP, desc(injuries)))) +
   scale_y_continuous("Number of Injuries") +
   ggtitle("Number of Injuries\n by Weather Category\n from 1996 - 2011")
 grid.arrange(fPlot, iPlot, ncol = 2)
+```
 
+### Impact on Economy
+
+```{r}
 pData <- economicData %>%
   arrange(desc(propertyDamage)) %>%
   select(EVGROUP, propertyDamage) %>%
