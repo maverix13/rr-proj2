@@ -1,7 +1,7 @@
 ---
 title: "Analysis of severe weather events on public health and economic consequences across United States"
 author: "Maverix13"
-date: "September 13, 2015"
+date: "September 21, 2015"
 output: 
 html_document: 
 keep_md: yes
@@ -14,7 +14,7 @@ The analysis covers:
 * Across United States, events that are most harmful to public health.
 * Across United States, events that have greatest economic consequences.
 
-Results <% plug here%>
+Results, covered later in the document, shows that 50% of the fatalities are caused by Extreme Temperature and Convection related weather events while combined with Flood and Wind accounts for about 80% of fatalities. Similarly, Convection and Extreme Temperatures cause about 60% of injuries, which combined with combined with Flood and Wind causes over 80% injuries. Economic impact of weather related activities is mostly caused by Flood and Cyclone resulting in over $250 billion. Property damage accounts for over 90% of the economic impact. 
 
 ## Data Processing
 
