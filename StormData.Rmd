@@ -247,7 +247,7 @@ ePlot <- ggplot(meltData, aes(x = EVGROUP, y = value/1000000000, fill = variable
   xlab("Severe Weather Category") +
   scale_y_continuous("Damage $ (Billions of Dollars)") +  
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-print(ePlot)
+print(ePlot) 
 
 ```
 
