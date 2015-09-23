@@ -2,7 +2,7 @@
 title: "Analysis of severe weather events on public health and economic consequences across United States"
 author: "Maverix13"
 date: "September 21, 2015"
-output: 
+output: pdf_document
 html_document: 
 keep_md: yes
 ---
