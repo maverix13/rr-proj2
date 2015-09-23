@@ -171,6 +171,7 @@ formattable(fData, list(
   cumPercent = percent
 ))
 ```
+
 Table above shows fatalities along with a cumulative percent. Extreme Temperature, Convection, Flood and Wind together cause over 7500 fatalities which is close to 80% of total fatalities. 
 ```{r}
 iData <- pubHealthData %>%
@@ -184,6 +185,7 @@ formattable(iData, list(
   cumPercent = percent
 ))
 ```
+
 As with fatalities, injuries are also mostly caused by Convection, Extreme Temperature, Flood and Wind resulting in over 50,000 injuries.
 ```{r}
 fPlot <- ggplot(fData, aes(x=reorder(EVGROUP, desc(fatalities)))) +
@@ -201,6 +203,8 @@ iPlot <- ggplot(iData, aes(x=reorder(EVGROUP, desc(injuries)))) +
 grid.arrange(fPlot, iPlot, ncol = 2)
 ```
 
+Based on the graphs above, we see that there are lot more injuries compared to fatalities but the top 2 weather event are Extreme Tmperature and Convection.
+
 ### Impact on Economy
 
 ```{r}
@@ -215,6 +219,11 @@ formattable(pData, list(
   propertyDamage=currency,
   cumPercent = percent
 ))
+```
+
+Table above shows that over $250 billion in prpoerty damage is caused by Flood and Cyclone.
+
+```{r}
 cData <- economicData %>%
   arrange(desc(cropDamage)) %>%
   select(EVGROUP, cropDamage) %>%
@@ -226,13 +235,21 @@ formattable(cData, list(
   cropDamage=currency,
   cumPercent = percent
 ))
+```
 
+Comparing crop damage to property damage shows that crop damage does not have as significant economic impact as property damage. Crop damage totaled close to $34 billion across all weather events. Hence the chart below takes total property damage into account.
+
+```{r}
 
 meltData <- melt(economicData[,c('EVGROUP','propertyDamage','cropDamage')], id.var="EVGROUP")
-ePlot <- ggplot(meltData, aes(x = EVGROUP, y = value/1000000, fill = variable)) + 
+ePlot <- ggplot(meltData, aes(x = EVGROUP, y = value/1000000000, fill = variable)) + 
   geom_bar(stat = "identity") +
+  xlab("Severe Weather Category") +
+  scale_y_continuous("Damage $ (Billions of Dollars)") +  
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 print(ePlot)
 
 ```
+
+Majority of economic impact is attributed to property damage caused by Flood and Cyclone.
 
